@@ -1,48 +1,27 @@
 
 use regex::Regex;
+use super::parser::Parser;
+use super::parser_match::ParserMatch;
 
-
+#[derive(Clone, Debug)]
 pub struct Grammar{
-
+    rules:Vec<Box<dyn Parser>>
 }
-impl Grammar{}
-
-
-#[derive(Clone)]
-pub enum ParserOperator {
-    // "..."
-    Literal {
-        literal_text: String,
-    },
-    // re"..."is
-    Regex {
-        regular_expression: Regex,
-    },
-    // [exp] [exp] [exp]
-    Sequence {
-        children: Vec<ParserOperator>,
-    },
-    // [exp] / [exp] / [exp]
-    Alternation {
-        children: Vec<ParserOperator>,
-    },
-    // [exp]+ or [exp]* or [exp]?
-    Quantity {
-        child: Box<ParserOperator>,
-        minimum_occurrences: usize,
-        maximum_occurrences: usize,
-    },
-    // ![exp] or &[exp]
-    Lookahead {
-        child: Box<ParserOperator>,
-        scout: Box<ParserOperator>,
-        accept_match: bool,
-    },
+impl Parser for Grammar{
+    fn parse<'a>(&self, full_text: &'a str, start_position: usize) -> Option<ParserMatch<'a>> {
+        // TODO: implement grammar
+        todo!("Not done yet")
+    }
 }
 
-
-impl ParserOperator {
-    pub fn literal(literal_text: &str) -> ParserOperator {
+// "..."
+#[derive(Clone, Debug)]
+struct LiteralNode {
+    literal_text: String,
+    label_text:Option<String>
+}
+impl LiteralNode{
+    fn new(literal_text: &str) -> LiteralNode {
         if literal_text.len() == 0 {
             panic!("Zero Length Literal is not permitted")
         }
@@ -50,6 +29,66 @@ impl ParserOperator {
             literal_text: literal_text.into(),
         }
     }
+}
+impl Parser for LiteralNode{
+    fn parse<'a>(&self, full_text: &'a str, start_position: usize) -> Option<ParserMatch<'a>> {
+        if full_text[start_position..].starts_with(self.literal_text) {
+            Some(ParserMatch {
+                start: start_position,
+                end: start_position + self.literal_text.len(),
+                label: None,
+            })
+        } else {
+            None
+        }
+    }
+    fn label(&self)->Option<&str> {
+        return self.label_text.into()
+    }
+}
+
+
+// re"..."is
+#[derive(Clone, Debug)]
+struct RegexNode {
+    regular_expression: Regex,
+}
+
+// [exp] [exp] [exp]
+#[derive(Clone, Debug)]
+struct SequenceNoce {
+    children: Vec<Box<dyn Parser>>,
+}
+
+// [exp] / [exp] / [exp]
+#[derive(Clone, Debug)]
+struct Alternation {
+    children: Vec<Box<dyn Parser>>,
+}
+
+// [exp]+ or [exp]* or [exp]?
+#[derive(Clone, Debug)]
+struct Quantity {
+    child: Box<dyn Parser>,
+    minimum_occurrences: usize,
+    maximum_occurrences: usize,
+}
+
+// ![exp] or &[exp]
+#[derive(Clone, Debug)]
+struct LookaheadPositive {
+    child: Box<dyn Parser>,
+    scout: Box<dyn Parser>,
+}
+
+#[derive(Clone, Debug)]
+struct LookaheadNegative {
+    child: Box<dyn Parser>,
+    scout: Box<dyn Parser>,
+}
+
+
+impl ParserOperator {
     pub fn regex(regular_expression: &str) -> ParserOperator {
         let regular_expression: String = if !regular_expression.starts_with("^") {
             "^".to_owned() + regular_expression
