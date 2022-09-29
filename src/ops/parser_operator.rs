@@ -1,27 +1,65 @@
 
-use regex::Regex;
-use super::parser::Parser;
-use super::parser_match::ParserMatch;
+use std::collections::BTreeMap;
 
-#[derive(Clone, Debug)]
-pub struct Grammar{
-    rules:Vec<Box<dyn Parser>>
-}
-impl Parser for Grammar{
-    fn parse<'a>(&self, full_text: &'a str, start_position: usize) -> Option<ParserMatch<'a>> {
-        // TODO: implement grammar
-        todo!("Not done yet")
+use regex::Regex;
+
+// TODO: BTreeMap is the wrong type; we are unable to retrieve the first item declared in the event that a starting rule is not defined
+pub type ParserRuleSet = BTreeMap<String, ParserOperator>;
+
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum ParserOperator {
+
+    Grammar {
+        rule_set:ParserRuleSet,
+        starting_rule:Option<String>
+    },
+
+    Label {
+        child:Box<ParserOperator>,
+        label:String
+    },
+
+    // rule
+    RuleReference {
+        rule_name:String
+    },
+
+    // "..."
+    Literal {
+        literal_text: String,
+    },
+    // re"..."is
+    Regex {
+        // TODO: Regex is not hash-able... this one is not nice to fix since we don't want to store the string and recompile every time :(
+        //       To fix it we are going to have to memoize the compiled regex expression during parsing
+        regular_expression: Regex,
+    },
+    // [exp] [exp] [exp]
+    Sequence {
+        children: Vec<ParserOperator>,
+    },
+    // [exp] / [exp] / [exp]
+    Alternation {
+        children: Vec<ParserOperator>,
+    },
+    // [exp]+ or [exp]* or [exp]?
+    Quantity {
+        child: Box<ParserOperator>,
+        minimum_occurrences: usize,
+        maximum_occurrences: usize,
+    },
+    // ![exp] or &[exp]
+    Lookahead {
+        child: Box<ParserOperator>,
+        scout: Box<ParserOperator>,
+        accept_match: bool,
     }
 }
 
-// "..."
-#[derive(Clone, Debug)]
-struct LiteralNode {
-    literal_text: String,
-    label_text:Option<String>
-}
-impl LiteralNode{
-    fn new(literal_text: &str) -> LiteralNode {
+
+impl ParserOperator {
+    pub fn literal(literal_text: &str) -> ParserOperator {
         if literal_text.len() == 0 {
             panic!("Zero Length Literal is not permitted")
         }
@@ -29,66 +67,6 @@ impl LiteralNode{
             literal_text: literal_text.into(),
         }
     }
-}
-impl Parser for LiteralNode{
-    fn parse<'a>(&self, full_text: &'a str, start_position: usize) -> Option<ParserMatch<'a>> {
-        if full_text[start_position..].starts_with(self.literal_text) {
-            Some(ParserMatch {
-                start: start_position,
-                end: start_position + self.literal_text.len(),
-                label: None,
-            })
-        } else {
-            None
-        }
-    }
-    fn label(&self)->Option<&str> {
-        return self.label_text.into()
-    }
-}
-
-
-// re"..."is
-#[derive(Clone, Debug)]
-struct RegexNode {
-    regular_expression: Regex,
-}
-
-// [exp] [exp] [exp]
-#[derive(Clone, Debug)]
-struct SequenceNoce {
-    children: Vec<Box<dyn Parser>>,
-}
-
-// [exp] / [exp] / [exp]
-#[derive(Clone, Debug)]
-struct Alternation {
-    children: Vec<Box<dyn Parser>>,
-}
-
-// [exp]+ or [exp]* or [exp]?
-#[derive(Clone, Debug)]
-struct Quantity {
-    child: Box<dyn Parser>,
-    minimum_occurrences: usize,
-    maximum_occurrences: usize,
-}
-
-// ![exp] or &[exp]
-#[derive(Clone, Debug)]
-struct LookaheadPositive {
-    child: Box<dyn Parser>,
-    scout: Box<dyn Parser>,
-}
-
-#[derive(Clone, Debug)]
-struct LookaheadNegative {
-    child: Box<dyn Parser>,
-    scout: Box<dyn Parser>,
-}
-
-
-impl ParserOperator {
     pub fn regex(regular_expression: &str) -> ParserOperator {
         let regular_expression: String = if !regular_expression.starts_with("^") {
             "^".to_owned() + regular_expression
