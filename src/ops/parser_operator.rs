@@ -1,19 +1,25 @@
 
-use std::collections::BTreeMap;
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ParserRuleSet{
+    rule_set:Vec<(String, ParserOperator)>,
+    starting_rule:Option<String>
+}
 
-use regex::Regex;
-
-// TODO: BTreeMap is the wrong type; we are unable to retrieve the first item declared in the event that a starting rule is not defined
-pub type ParserRuleSet = BTreeMap<String, ParserOperator>;
-
+impl ParserRuleSet{
+    pub fn get_rule_by_name(&self, rule_name:&str) -> Option<&(String, ParserOperator)>{
+        self.rule_set
+        .iter()
+        .find(|(each_rule_name, each_parser_operator)| rule_name==each_rule_name)
+    }
+    pub fn get_starting_rule(&self) -> Option<&(String, ParserOperator)>{
+        self.starting_rule.as_ref().map(|rule_name|self.get_rule_by_name(rule_name)).flatten().or(self.rule_set.first())
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum ParserOperator {
 
-    Grammar {
-        rule_set:ParserRuleSet,
-        starting_rule:Option<String>
-    },
+    Grammar (ParserRuleSet),
 
     Label {
         child:Box<ParserOperator>,
@@ -31,9 +37,10 @@ pub enum ParserOperator {
     },
     // re"..."is
     Regex {
-        // TODO: Regex is not hash-able... this one is not nice to fix since we don't want to store the string and recompile every time :(
-        //       To fix it we are going to have to memoize the compiled regex expression during parsing
-        regular_expression: Regex,
+        pattern: String,
+        multi_line: bool,
+        case_insensitive: bool,
+        dot_matches_new_line: bool
     },
     // [exp] [exp] [exp]
     Sequence {
@@ -67,18 +74,16 @@ impl ParserOperator {
             literal_text: literal_text.into(),
         }
     }
-    pub fn regex(regular_expression: &str) -> ParserOperator {
-        let regular_expression: String = if !regular_expression.starts_with("^") {
-            "^".to_owned() + regular_expression
-        } else {
-            regular_expression.into()
-        };
-        match Regex::new(regular_expression.as_str()) {
-            Ok(regular_expression) => ParserOperator::Regex { regular_expression },
-            Err(e) => {
-                println!("{:?}", e);
-                panic!("Failed to parse regular expression");
-            }
+    pub fn regex(pattern: &str, multi_line:bool, case_insensitive:bool,dot_matches_new_line:bool) -> ParserOperator {
+        ParserOperator::Regex {
+            pattern:if !pattern.starts_with("^") {
+                "^".to_owned() + pattern
+            } else {
+                pattern.into()
+            },
+            multi_line,
+            case_insensitive,
+            dot_matches_new_line,
         }
     }
     pub fn sequence(children: Vec<ParserOperator>) -> ParserOperator {

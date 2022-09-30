@@ -3,7 +3,7 @@ pub struct ParserMatch {
     pub start: usize,
     pub end: usize,
     pub label: Option<String>,
-    pub children: Vec<ParserMatch>,
+    pub children: Vec<&ParserMatch>,
 }
 impl ParserMatch {
     pub fn len(&self) -> usize {
@@ -22,6 +22,8 @@ impl ParserMatch {
         }
     }
 }
+
+
 
 #[cfg(tests)]
 mod tests {
