@@ -1,28 +1,41 @@
+///////////////////////
+///   ParserMatch   ///
+///////////////////////
+
+use std::rc::Rc;
+
 #[derive(Debug)]
 pub struct ParserMatch {
-    pub start: usize,
-    pub end: usize,
-    pub label: Option<String>,
-    pub children: Vec<&ParserMatch>,
+    start_position: usize,
+    end_position: usize,
+    label: Option<String>,
+    children: Vec<Rc<ParserMatch>>,
 }
 impl ParserMatch {
+    pub fn new(start_position: usize, end_position: usize, label: Option<String>, children: Vec<Rc<Self>>)->Rc<Self>{
+        Rc::new(ParserMatch {
+            start_position,
+            end_position,
+            label,
+            children,
+        })
+    }
     pub fn len(&self) -> usize {
-        self.end - self.start
+        self.end_position - self.start_position
     }
     pub fn get_text<'a> (&self, full_text:&'a str) -> &'a str{
-        full_text[self.start..self.end].into()
+        full_text[self.start_position..self.end_position].into()
     }
 
-    pub fn with_label(self, new_label:&str)->Self{
-        Self{
-            start   : self.start,
-            end     : self.end,
-            label   : Some(new_label.into()),
-            children: self.children,
-        }
+    pub fn with_label(&self, new_label:&str)->Rc<Self>{
+        Self::new(
+            self.start_position,
+            self.end_position,
+            Some(new_label.into()),
+            self.children,
+        )
     }
 }
-
 
 
 #[cfg(tests)]
