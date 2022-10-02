@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{rc::Rc, cell::RefCell};
 
 use super::{
     parser_match::ParserMatch,
@@ -6,30 +6,28 @@ use super::{
     parser_operator::ParserOperator
 };
 
-//////////////////
-///   Parser   ///
-//////////////////
-
 pub trait Parser {
-    fn parse(&self, context: Rc<ParserContext>, start_position: usize) -> Option<Rc<ParserMatch>>;
+    fn parse(&self, context: RefCell<ParserContext>, start_position: usize) -> Option<Rc<ParserMatch>>;
 }
 
 impl Parser for ParserOperator {
-    fn parse(&self, context: Rc<ParserContext>, start_position: usize) -> Option<Rc<ParserMatch>> {
+    fn parse(&self, context:RefCell<ParserContext>, start_position: usize) -> Option<Rc<ParserMatch>> {
 
         // Try to lookup previously computed value:
-        if let Some(result) = context.get_memory(start_position, self.get_id()){
+        if let Some(result) = context.borrow_mut().get_memory(start_position, self.get_id()){
             return result
         }
 
         // TODO: search parse context for previous attempt to parse this ParserOperator instance at the same start_position
         let result:Option<Rc<ParserMatch>> = match self {
-            ParserOperator::Grammar { parser_rule_set, id} => {//ParserRuleSet{rule_set, starting_rule})=>{
-                context.push_rule_set(parser_rule_set);
+            ParserOperator::Grammar { parser_rule_set, id} => {
+                context.borrow_mut().push_rule_set(parser_rule_set.clone());
                 
-                if let Some((rule_name, parser_operator)) = context.get_starting_rule(){
-                    let result = parser_operator.parse(context, start_position).map(|res| res.with_label(rule_name));
-                    context.pop_rule_set();
+                if let Some((rule_name, parser_operator)) = context.borrow().get_starting_rule(){
+                    let result = parser_operator
+                        .parse(context, start_position)
+                        .map(|res| res.with_label(rule_name));
+                    context.borrow_mut().pop_rule_set();
                     result
                 }else{
                     // TODO: we couldn't find a starting rule somehow
@@ -38,11 +36,11 @@ impl Parser for ParserOperator {
             }
 
             ParserOperator::Label { child, label, id } => {
-                child.parse(context, start_position).map(|item| item.with_label(label))
+                child.parse(context, start_position).map(|item| item.with_label(label.clone()))
             }
 
             ParserOperator::RuleReference { rule_name , id} => {
-                if let Some((rule_name, parser_operator)) = context.get_rule(rule_name){
+                if let Some((rule_name, parser_operator)) = context.get_mut().get_rule(rule_name){
                     parser_operator.parse(context, start_position).map(|res| res.with_label(rule_name))
                 }else{
                     // TODO: Probably the user would like a nice message, not a crash
@@ -51,12 +49,12 @@ impl Parser for ParserOperator {
             }
 
             ParserOperator::Literal { literal_text , id} => {
-                if context.get_full_text()[start_position..].starts_with(literal_text) {
+                if context.borrow().get_full_text()[start_position..].starts_with(&literal_text[..]) {
                     Some(ParserMatch::new(
                         start_position,
                         start_position + literal_text.len(),
                         None,
-                        vec![]
+                        vec![].into()
                     ))
                 } else {
                     None
@@ -64,8 +62,8 @@ impl Parser for ParserOperator {
             }
 
             ParserOperator::Regex{ pattern, multi_line, case_insensitive, dot_matches_new_line , id} => {
-                let regex = context.get_compiled_regex(pattern, *multi_line, *case_insensitive, *dot_matches_new_line);
-                let text_to_match = &context.get_full_text()[start_position..];
+                let regex = context.borrow().get_compiled_regex(pattern, *multi_line, *case_insensitive, *dot_matches_new_line);
+                let text_to_match = &context.borrow().get_full_text()[start_position..];
                 regex.find(text_to_match).map(|re_match| {
                     if re_match.start() != 0 {
                         panic!("Regular expression matched but not at the specified position")
@@ -76,7 +74,7 @@ impl Parser for ParserOperator {
                         start_position,
                         start_position + re_match.end() - re_match.start(),
                         None,
-                        vec![],
+                        vec![].into(),
                     )
                 })
             }
@@ -101,7 +99,7 @@ impl Parser for ParserOperator {
                         start_position,
                         end_position,
                         None,
-                        sub_matches
+                        sub_matches.into()
                     ))
                 } else {
                     None
@@ -124,7 +122,7 @@ impl Parser for ParserOperator {
                             start_position,
                             end_position,
                             None,
-                            vec![sub_match.clone()]
+                            vec![sub_match.clone()].into()
                         )
                     )
             }
@@ -153,7 +151,7 @@ impl Parser for ParserOperator {
                         start_position,
                         end_position,
                         None,
-                        sub_matches
+                        sub_matches.into()
                     ))
                 }
             }
@@ -172,6 +170,6 @@ impl Parser for ParserOperator {
                 }
             }
         };
-        context.set_memory(self.get_id(), start_position, result)
+        context.get_mut().set_memory(self.get_id(), start_position, result)
     }
 }

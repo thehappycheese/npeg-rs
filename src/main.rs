@@ -1,5 +1,5 @@
 mod ops;
-use std::rc::Rc;
+use std::cell::RefCell;
 
 use ops::ParserOperator;
 use ops::Parser;
@@ -20,7 +20,7 @@ fn main() {
     let reg = ParserOperator::regex("^[0-9]", false, false, false);
     //let seq = ParserOperator::sequence(vec![qtt.clone(), reg, lit_b.clone()]);
     let alt = ParserOperator::alternation(vec![lit_a.into(), lit_b.into(), reg.into()]);
-    let context = Rc::new(ParserContext::new(test_string));
+    let context = RefCell::new(ParserContext::new(test_string));
     println!("{:?}", alt.parse(context, 0));
 
     //let re = Regex::new("^[ab]").unwrap();

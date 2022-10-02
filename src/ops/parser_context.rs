@@ -7,7 +7,7 @@ use super::{parser_match::ParserMatch, parser_operator::ParserOperator, parser_r
 pub struct ParserContext<'ft> {
     full_text: &'ft str,
     memory: BTreeMap<(usize, usize), Option<Rc<ParserMatch>>>,
-    rule_sets: Vec<&'ft ParserRuleSet>,
+    rule_sets: Vec<Rc<ParserRuleSet>>,
 }
 
 impl<'ft> ParserContext<'ft> {
@@ -37,17 +37,23 @@ impl<'ft> ParserContext<'ft> {
         parser_match
     }
 
-    pub fn push_rule_set(&mut self, rule_set: &'ft ParserRuleSet) {
+    pub fn push_rule_set(&mut self, rule_set: Rc<ParserRuleSet>) {
         self.rule_sets.push(rule_set)
     }
     pub fn pop_rule_set(&mut self) {
         self.rule_sets.pop();
     }
-    pub fn get_rule(&self, rule_name: &str) -> Option<&(String, ParserOperator)> {
-        self.rule_sets.last().map(|rule_set| rule_set.get_rule_by_name(rule_name)).flatten()
+    pub fn get_rule(&self, rule_name: &str) -> Option<(Rc<String>, Rc<ParserOperator>)> {
+        self.rule_sets
+        .last()
+        .map(|rule_set| rule_set.get_rule_by_name(rule_name))
+        .flatten()
     }
-    pub fn get_starting_rule(&self) -> Option<&(String, ParserOperator)> {
-        self.rule_sets.last().map(|rule_set| rule_set.get_starting_rule()).flatten()
+    pub fn get_starting_rule(&self) -> Option<(Rc<String>, Rc<ParserOperator>)> {
+        self.rule_sets
+        .last()
+        .map(|rule_set| rule_set.get_starting_rule())
+        .flatten()
     }
     pub fn get_compiled_regex(&self, pattern: &str, multi_line: bool, case_insensitive: bool, dot_matches_new_line: bool) -> Regex {
         // TODO:  memoize; this is super slow to do repeatedly
@@ -59,7 +65,7 @@ impl<'ft> ParserContext<'ft> {
         {
             Ok(regex) => regex,
             Err(_) => {
-                panic!("TODO: Regex did not parse, this is a user error I think?")
+                panic!("TODO: Regex did not parse {}, this is a user error I think?", pattern)
             }
         }
     }

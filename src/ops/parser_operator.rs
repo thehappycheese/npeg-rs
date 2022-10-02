@@ -5,67 +5,59 @@ use super::{
     opaque_identifier::OpaqueIdentifier,
 };
 
-//////////////////////////
-///   ParserOperator   ///
-//////////////////////////
-
 #[derive(Debug, PartialEq, Eq)]
 pub enum ParserOperator {
-
     Grammar {
-        id:OpaqueIdentifier,
-        parser_rule_set:ParserRuleSet,
+        id                  : OpaqueIdentifier,
+        parser_rule_set     : Rc<ParserRuleSet>,
     },
-
     // label:[exp]
     Label {
-        id:OpaqueIdentifier,
-        child:Rc<ParserOperator>,
-        label:String
+        id                  : OpaqueIdentifier,
+        child               : Rc<ParserOperator>,
+        label               : Rc<String>,
     },
-
     // rule
     RuleReference {
-        id:OpaqueIdentifier,
-        rule_name:String
+        id                  : OpaqueIdentifier,
+        rule_name           : Rc<String>,
     },
-
     // "..."
     Literal {
-        id:OpaqueIdentifier,
-        literal_text: String,
+        id                  : OpaqueIdentifier,
+        literal_text        : Rc<String>,
     },
     // re"..."is
     Regex {
-        id:OpaqueIdentifier,
-        pattern: String,
-        multi_line: bool,
-        case_insensitive: bool,
+        id                  : OpaqueIdentifier,
+        pattern             : Rc<String>,
+        multi_line          : bool,
+        case_insensitive    : bool,
         dot_matches_new_line: bool
     },
     // [exp] [exp] [exp]
     Sequence {
-        id:OpaqueIdentifier,
-        children: Vec<Rc<ParserOperator>>,
+        id                  : OpaqueIdentifier,
+        children            : Vec<Rc<ParserOperator>>,
     },
     // [exp] / [exp] / [exp]
     Alternation {
-        id:OpaqueIdentifier,
-        children: Vec<Rc<ParserOperator>>,
+        id                  : OpaqueIdentifier,
+        children            : Vec<Rc<ParserOperator>>,
     },
     // [exp]+ or [exp]* or [exp]?
     Quantity {
-        id:OpaqueIdentifier,
-        child: Rc<ParserOperator>,
-        minimum_occurrences: usize,
-        maximum_occurrences: usize,
+        id                  : OpaqueIdentifier,
+        child               : Rc<ParserOperator>,
+        minimum_occurrences : usize,
+        maximum_occurrences : usize,
     },
     // ![exp] or &[exp]
     Lookahead {
-        id:OpaqueIdentifier,
-        child: Rc<ParserOperator>,
-        scout: Rc<ParserOperator>,
-        accept_match: bool,
+        id                  : OpaqueIdentifier,
+        child               : Rc<ParserOperator>,
+        scout               : Rc<ParserOperator>,
+        accept_match        : bool,
     }
 }
 
@@ -92,16 +84,16 @@ impl ParserOperator {
         }
         Self::Literal {
             id:OpaqueIdentifier::new(),
-            literal_text: literal_text.into(),
+            literal_text: Rc::new(literal_text.to_owned()),
         }
     }
     pub fn regex(pattern: &str, multi_line:bool, case_insensitive:bool,dot_matches_new_line:bool) -> ParserOperator {
         ParserOperator::Regex {
             id:OpaqueIdentifier::new(),
             pattern:if !pattern.starts_with("^") {
-                "^".to_owned() + pattern
+                Rc::new("^".to_owned() + pattern)
             } else {
-                pattern.into()
+                Rc::new(pattern.to_owned())
             },
             multi_line,
             case_insensitive,
