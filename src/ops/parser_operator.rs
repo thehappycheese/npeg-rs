@@ -78,6 +78,19 @@ impl ParserOperator {
         }
     }
 
+    pub fn grammar(starting_rule:Option<&str>, rules:Vec<(&str, ParserOperator)>) -> Self{
+        // TODO: check for duplicate rule definitions
+        // TODO: if the top level rules are Self::Label this is an issue; the grammar parser will override the Label
+        Self::Grammar {
+            id: OpaqueIdentifier::new(),
+            parser_rule_set: ParserRuleSet {
+                rule_set:rules.into_iter().map(|(name, rule)|(Rc::new(name.into()), Rc::new(rule))).collect(),
+                starting_rule_name:starting_rule.map(|item| item.to_owned())
+            }.into()
+        }
+
+    }
+
     pub fn literal(literal_text: &str) -> ParserOperator {
         if literal_text.len() == 0 {
             panic!("Zero Length Literal is not permitted")
@@ -100,13 +113,13 @@ impl ParserOperator {
             dot_matches_new_line,
         }
     }
-    pub fn sequence(children: Vec<Rc<ParserOperator>>) -> ParserOperator {
+    pub fn sequence(children: Vec<ParserOperator>) -> ParserOperator {
         if children.len() == 0 {
             panic!("Zero length Sequence is not permitted")
         }
         Self::Sequence { 
             id:OpaqueIdentifier::new(),
-            children 
+            children:children.into_iter().map(|item|item.into()).collect()
         }
     }
     pub fn quantity(
@@ -126,26 +139,41 @@ impl ParserOperator {
         }
     }
 
-    pub fn alternation(children: Vec<Rc<ParserOperator>>) -> ParserOperator {
+    pub fn alternation(children: Vec<ParserOperator>) -> ParserOperator {
         if children.len() == 0 {
             panic!("Zero Length Alternations are not permitted")
         }
         Self::Alternation {
             id:OpaqueIdentifier::new(),
-            children
+            children:children.into_iter().map(|item|item.into()).collect()
         }
     }
 
     pub fn lookahead(
-        child: ParserOperator,
-        scout: ParserOperator,
+        child: Self,
+        scout: Self,
         accept_match: bool,
-    ) -> ParserOperator {
+    ) -> Self {
         Self::Lookahead {
-            id:OpaqueIdentifier::new(),
+            id: OpaqueIdentifier::new(),
             child: child.into(),
             scout: scout.into(),
             accept_match,
+        }
+    }
+
+    pub fn label(child: Self, arg: &str) -> Self {
+        // TODO: dont permit label to be under label?
+        Self::Label {
+            id: OpaqueIdentifier::new(),
+            child: child.into(),
+            label: Rc::new(arg.into())
+        }
+    }
+    pub fn rule_reference(rule_name:&str)-> Self{
+        Self::RuleReference {
+            id: OpaqueIdentifier::new(),
+            rule_name: Rc::new(rule_name.into())
         }
     }
 }

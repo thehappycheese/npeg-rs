@@ -1,10 +1,21 @@
 
 use std::rc::Rc;
 
+
+
+/// `ParserMatch`
+/// 
+/// The result of a successful `ParserOperator::parse(...)`
+/// 
+/// `ParserMatch` may or may not have a label which is assigned to the match as part of the `parse()` process
+/// 
+/// The label
+/// 
 #[derive(Debug)]
 pub struct ParserMatch {
     start_position: usize,
     end_position: usize,
+    /// eh?
     label: Option<Rc<String>>,
     children: Rc<Vec<Rc<ParserMatch>>>,
 }
@@ -51,5 +62,17 @@ mod tests {
         );
         let full_text = "0123456789";
         assert_eq!(m.get_text(full_text), "0");
+    }
+
+    #[test]
+    fn match_gets_correct_substring_unicode() {
+        let m = ParserMatch::new(
+            0,
+            "0✔️".len(),
+            None,
+            Rc::new(vec![]),
+        );
+        let full_text = "0✔️23456789";
+        assert_eq!(m.get_text(full_text), "0✔️");
     }
 }
