@@ -1,9 +1,5 @@
-[package]
-name = "npeg-rs"
-version = "0.1.0"
-authors = ["thehappycheese"]
-edition = "2021"
+[workspace]
 
-
-[dependencies]
-regex = "1"
+members = [
+    "npeg_rs"
+]

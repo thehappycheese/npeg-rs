@@ -1,0 +1,10 @@
+[package]
+name = "npeg_rs"
+version = "0.1.0"
+authors = ["thehappycheese"]
+edition = "2021"
+
+[lib]
+
+[dependencies]
+regex = "1"

@@ -2,12 +2,17 @@ use regex::{Regex, RegexBuilder};
 
 use std::{collections::BTreeMap, rc::Rc};
 
-use super::{parser_match::ParserMatch, parser_operator::ParserOperator, parser_rule_set::ParserRuleSet};
+use super::{
+    ParserMatch,
+    Parser,
+};
+use crate::ops::Grammar;
+
 
 pub struct ParserContext<'ft> {
     full_text: &'ft str,
     memory: BTreeMap<(usize, usize), Option<Rc<ParserMatch>>>,
-    rule_sets: Vec<Rc<ParserRuleSet>>,
+    current_grammar: Vec<Rc<Grammar>>,
 }
 
 impl<'ft> ParserContext<'ft> {
@@ -15,7 +20,7 @@ impl<'ft> ParserContext<'ft> {
         ParserContext {
             full_text,
             memory: BTreeMap::new(),
-            rule_sets: vec![],
+            current_grammar: vec![],
         }
     }
     pub fn get_full_text(&self) -> &str {
@@ -30,27 +35,23 @@ impl<'ft> ParserContext<'ft> {
             // TODO: If we try re-insert over the same key, this is not the user's fault. Try to add test case or something?
             panic!("Reinserted over same key at position {}", start_position)
         };
-        // Cant do this:
-        //&parser_match
-
-        // TODO: we have to do an unwrap here to borrow the value we stored in memory... sucks to have to look it up again :/
         parser_match
     }
 
-    pub fn push_rule_set(&mut self, rule_set: Rc<ParserRuleSet>) {
-        self.rule_sets.push(rule_set)
+    pub fn push_rule_set(&mut self, rule_set: Rc<Grammar>) {
+        self.current_grammar.push(rule_set)
     }
     pub fn pop_rule_set(&mut self) {
-        self.rule_sets.pop();
+        self.current_grammar.pop();
     }
-    pub fn get_rule(&self, rule_name: &str) -> Option<(Rc<String>, Rc<ParserOperator>)> {
-        self.rule_sets
+    pub fn get_rule(&self, rule_name: &str) -> Option<(Rc<String>, Rc<dyn Parser>)> {
+        self.current_grammar
         .last()
         .map(|rule_set| rule_set.get_rule_by_name(rule_name))
         .flatten()
     }
-    pub fn get_starting_rule(&self) -> Option<(Rc<String>, Rc<ParserOperator>)> {
-        self.rule_sets
+    pub fn get_starting_rule(&self) -> Option<(Rc<String>, Rc<dyn Parser>)> {
+        self.current_grammar
         .last()
         .map(|rule_set| rule_set.get_starting_rule())
         .flatten()

@@ -5,10 +5,11 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 /// 
 /// Thanks to cdhowie at https://stackoverflow.com/questions/72148631/how-can-i-hash-by-a-raw-pointer for this snippet
 /// 
-/// ```
+/// ```ignore
 /// use std::collections::BTreeMap;
 /// use std::hash::{Hash, Hasher};
-/// struct UnHashableData {};
+/// use npeg_rs_trait::core::opaque_identifier::OpaqueIdentifier;
+/// struct UnHashableData {/* You can't hash me! */};
 /// struct KeyStruct {
 ///     identifier:OpaqueIdentifier,
 ///     some_unhashable_data:UnHashableData
@@ -49,15 +50,17 @@ impl Default for OpaqueIdentifier {
 
 #[cfg(test)]
 mod tests{
+    use super::OpaqueIdentifier;
     #[test]
     fn test_manual_hash_impl(){
         //use std::collections::BTreeMap;
+
         use std::hash::{Hash, Hasher};
-        use super::OpaqueIdentifier;
-        struct UnHashableData {}
+
+        struct UnHashableData {/* can't hash me! */}
         struct KeyStruct {
             identifier:OpaqueIdentifier,
-            some_unhashable_data:UnHashableData
+            _some_unhashable_data:UnHashableData
         }
         impl Hash for KeyStruct{
             fn hash<H:Hasher>(&self, state:&mut H){

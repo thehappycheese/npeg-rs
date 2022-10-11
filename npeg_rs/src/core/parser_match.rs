@@ -15,7 +15,6 @@ use std::rc::Rc;
 pub struct ParserMatch {
     start_position: usize,
     end_position: usize,
-    /// eh?
     label: Option<Rc<String>>,
     children: Rc<Vec<Rc<ParserMatch>>>,
 }
@@ -35,7 +34,6 @@ impl ParserMatch {
     pub fn get_text<'a> (&self, full_text:&'a str) -> &'a str{
         full_text[self.start_position..self.end_position].into()
     }
-
     pub fn with_label(&self, new_label:Rc<String>)->Rc<Self>{
         Self::new(
             self.start_position,
